@@ -24,7 +24,7 @@
 
 ## ✋들어가기 앞서...👇
 
-#### 최종 수정 시간: 2024년 12월 23일 오전 11시
+#### 최종 수정 시간: 2024년 12월 23일 오후 1시
 
 이 문서는 지속적으로 업데이트될 예정입니다. 아래 목차를 참고하시면 보다 원활한 이해가 가능합니다.
 
@@ -48,7 +48,7 @@
 
 #### ⏰ 개발 일정 ⏰
 
-`24.12.23` 기존에 개발하던 코드 정리 및 기본 세팅
+`24.12.23` 기본 아키텍처 세팅
 
 `24.12.27` 개발 시작
 
@@ -57,3 +57,56 @@
 본 프로젝트는 개인 업무<s>(❗취업 준비❗)</s>와 병행하여 진행되고 있기 때문에,
 
 개발 일정이 다소 불규칙할 수 있으며 예상보다 개발이 지연될 수 있음을 미리 공지드립니다. 🙇‍♂️
+
+---
+
+### 2. 기술 스택
+
+#### 프로젝트 내 전반적으로 사용되는 기술 스택
+
+<img src="https://img.shields.io/badge/Kotlin-7F52FF?style=for-the-badge&logo=Kotlin&logoColor=white">
+<img src="https://img.shields.io/badge/springboot-6DB33F?style=for-the-badge&logo=springboot&logoColor=white">
+<img src="https://img.shields.io/badge/MySQL-4479A1?style=for-the-badge&logo=MySQL&logoColor=white">
+<img src="https://img.shields.io/badge/Redis-DC382D?style=for-the-badge&logo=Redis&logoColor=white"> 
+<img src="https://img.shields.io/badge/Apache Kafka-%3333333.svg?style=for-the-badge&logo=Apache Kafka&logoColor=white">
+
+---
+
+### 3. 아키텍처
+
+![config](https://github.com/user-attachments/assets/74bc1612-d8cc-4835-a039-99535e1b802a)
+
+#### Spring Cloud Config Server
+
+마이크로서비스 아키텍처 아래 분산 및 분리되어 있는 **여러 서비스에서 공통적으로 사용하는 설정 정보들을 효율적으로 관리하고 중앙 집중화**하기 위해 **Spring Cloud Config Server**를 사용하였습니다. Config 서버는 private로 선언된 Git Repository를 참조하고 있습니다. 
+
+해당 Git Repository에 데이터베이스, Redis, Kafka, JWT 관련 설정 등 여러 서비스에서 공통적으로 필요한 다양한 환경 파일을 저장함으로써, 버전 관리가 용이하고, DB 연결 정보나 AWS 시크릿 키와 같은 민감한 정보를 외부화하여 관리할 수 있습니다.
+
+또한, 서버 내부에 설정 파일이 존재하는 경우, 설정 값을 변경할 때마다 해당 서비스 애플리케이션에 직접 접속하여 수정해야 하는 불편함이 발생합니다. 
+
+예를 들어, 본 프로젝트에서는 대부분의 서비스들이 Eureka 서버에 등록되어 있는데, Eureka 클라이언트 관련 설정을 각 서비스마다 application.yml 파일에 작성하게 되면 코드의 양이 방대해져 굉장히 비효율적이고, Eureka 관련 특정 설정이 변경될 경우, 모든 서비스의 application.yml 파일을 일일이 수정해야 하는 불편함을 초래할 수 있습니다. 하지만, Config 서버를 사용하면, **하나의 Config 서버에 Eureka 클라이언트 관련 환경 정보 파일을 업로드하고, 각 서비스에서 이를 참조**하기만 하면 되므로 유지보수가 훨씬 쉬워집니다.
+
+[Kafka Bus를 활용한 설정 정보 최신화 관련 내용은 추후에 작성할 예정입니다.]
+
+![gateway_and_eureka](https://github.com/user-attachments/assets/2c4cda4f-c681-49d7-a28d-9f6802e7fb46)
+
+#### Eureka 서버와 Spring Cloud Gateway
+
+본 프로젝트는 마이크로서비스 아키텍처(Microservices Architecture, MSA)를 기반으로, 각 기능을 독립적인 서비스로 분리하여 구현하였습니다. 이러한 구조에서는 사용자 요청이 들어올 때, 해당 요청을 어느 서비스에 전달해야 하는지를 명확히 판단해야 하는데, 이를 위해 **Spring Cloud Gateway**를 사용하였습니다.
+
+Spring Cloud Gateway는 클라이언트의 요청 URI를 분석하여, 내부의 로드 밸런싱 알고리즘을 통해 **적절한 서비스로 요청을 전달**합니다. 이 때, Spring Cloud Gateway는 서비스의 위치 정보를 얻기 위해 **Eureka 서버**를 활용합니다. 
+
+Eureka 서버는 마이크로서비스 환경에서 서비스의 등록, 조회, 상태 관리 등을 담당하는 핵심적인 서비스 레지스트리입니다. Eureka 서버가 **마이크로서비스의 IP 주소, 포트 번호, 서비스 이름 등의 필수 정보를 자동으로 수집하고 갱신**하는 기능을 갖추고 있기 때문에, 서비스의 추가, 삭제, 변경이 발생하더라도 해당 내용이 즉시 반영됩니다. 또한, auto-scaling과 같이 동적으로 서버가 scale-in 또는 scale-out 되는 상황에서도 클라이언트는 항상 최신의 서비스 정보를 유지할 수 있어, 시스템의 안정성과 신뢰성을 크게 향상시킵니다.
+
+또한, 각 마이크로서비스는 Eureka 서버에 주기적으로 하트비트(heartbeat) 신호를 보내 자신의 상태를 알리는데, Eureka 서버는 일정 시간 동안 하트비트를 받지 못한 인스턴스를 서비스 목록에서 제거함으로써, 장애 발생 시에도 안정적인 시스템 운영을 보장할 수 있습니다.
+
+본 프로젝트에서 Eureka 서버는 다음과 같은 방식으로 Spring Cloud Gateway와 협업하여 작동합니다. 참고로, 위 사진에 명시된 순서 번호에 따라 나열해보았습니다.
+
+0) **서비스 등록** : 각 마이크로서비스는 자신의 정보를 Eureka 서버에 등록합니다.
+1) **사용자 요청**
+2) **서비스 조회** : Spring Cloud Gateway는 사용자 요청 URI를 분석하여 헤당 서비스의 이름을 Eureka 서버를 통해 조회하고, Eureka 서버는 요청받은 서비스 이름에 해당하는 인스턴스(서비스)를 반환합니다.
+3) **서비스 호출** : Spring Cloud Gateway는 조회한 서비스를 호출하여 사용자 요청을 전달합니다.
+
+---
+
+### 4. 세부 기능
