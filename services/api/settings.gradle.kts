@@ -1,1 +1,2 @@
-rootProject.name = "api"
+rootProject.name = "root"
+include("common")
