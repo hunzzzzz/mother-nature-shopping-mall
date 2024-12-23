@@ -1,0 +1,33 @@
+server:
+  port: 8888
+
+spring:
+  application:
+    name: config-service
+  cloud:
+    bus:
+      destination: ${KAFKA_TOPIC}
+      enabled: true
+      refresh:
+        enabled: true
+      env:
+        enabled: true
+    config:
+      server:
+        git:
+          uri: ${CONFIG_SERVER_GIT_URL}
+          username: ${CONFIG_SERVER_GIT_USERNAME}
+          password: ${CONFIG_SERVER_GIT_PASSWORD}
+          default-label: main
+          search-paths:
+            - 'aws'
+            - 'database'
+            - 'encrypt'
+            - 'eureka'
+            - 'jwt'
+            - 'mail'
+            - 'messaging'
+            - 'monitoring'
+            - 'oauth'
+  kafka:
+    bootstrap-servers: ${KAFKA_SERVER_URL}
